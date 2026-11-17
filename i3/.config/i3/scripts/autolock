@@ -1,0 +1,4 @@
+#!/bin/sh
+# (Re)start xss-lock: locks the screen before suspend and when X blanks it.
+pkill -x xss-lock
+exec xss-lock --transfer-sleep-lock -- "$HOME/.config/i3/scripts/lock" --nofork

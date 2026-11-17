@@ -1,0 +1,4 @@
+#!/bin/sh
+# (Re)start the mouse barriers that keep the cursor out of dead screen space.
+pkill -x barriers
+exec "$HOME/.config/i3/barriers/barriers"

@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Rofi menu of installed Steam games; picking one launches it through Steam.
+
+Reads every Steam library listed in libraryfolders.vdf (so games on /data show
+up too), hides Proton/runtimes/redistributables, and uses Steam's cached
+icons. Launching goes through `steam steam://rungameid/<id>`, which also
+starts Steam if it isn't running.
+"""
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+STEAM = Path.home() / ".local/share/Steam"
+ICONS = STEAM / "appcache/librarycache"
+# Installed "apps" that aren't games
+NOT_GAMES = re.compile(r"^(Proton|Steam Linux Runtime|Steamworks Common|Steam VR|SteamVR)", re.I)
+
+
+def libraries():
+    vdf = STEAM / "steamapps/libraryfolders.vdf"
+    try:
+        paths = re.findall(r'"path"\s+"([^"]+)"', vdf.read_text(errors="replace"))
+    except OSError:
+        paths = []
+    return [Path(p) for p in paths] or [STEAM]
+
+
+def games():
+    found = {}
+    for lib in libraries():
+        for acf in (lib / "steamapps").glob("appmanifest_*.acf"):
+            text = acf.read_text(errors="replace")
+            appid = re.search(r'"appid"\s+"(\d+)"', text)
+            name = re.search(r'"name"\s+"([^"]+)"', text)
+            if appid and name and not NOT_GAMES.match(name.group(1)):
+                found[appid.group(1)] = name.group(1)
+    return sorted(found.items(), key=lambda g: g[1].lower())
+
+
+def icon(appid):
+    # the 32x32 icon is the top-level <40 hex chars>.jpg in the game's cache dir
+    for f in (ICONS / appid).glob("*.jpg"):
+        if re.fullmatch(r"[0-9a-f]{40}\.jpg", f.name):
+            return str(f)
+    return "steam"
+
+
+def main():
+    items = games()
+    if not items:
+        subprocess.run(["notify-send", "Games", "No installed Steam games found"])
+        return 1
+    menu = "".join(f"{name}\0icon\x1f{icon(appid)}\n" for appid, name in items)
+    pick = subprocess.run(
+        ["rofi", "-dmenu", "-i", "-p", "  games", "-show-icons", "-format", "i"],
+        input=menu, capture_output=True, text=True,
+    )
+    if pick.returncode != 0 or not pick.stdout.strip().isdigit():
+        return 0  # cancelled
+    appid = items[int(pick.stdout.strip())][0]
+    subprocess.Popen(
+        ["steam", f"steam://rungameid/{appid}"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

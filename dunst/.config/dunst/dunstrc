@@ -1,0 +1,106 @@
+# dunst — notifications, yomi colors
+# Reload after editing: dunstctl reload
+
+[global]
+    # Where: top-right of the monitor with keyboard focus, just under polybar
+    follow = keyboard
+    origin = top-right
+    offset = (16, 46)
+    width = (280, 420)
+    height = (0, 240)
+    notification_limit = 5
+    indicate_hidden = yes
+    gap_size = 8
+
+    # Look
+    font = "Inter Medium 11"
+    frame_width = 2
+    corner_radius = 8
+    padding = 12
+    horizontal_padding = 14
+    text_icon_padding = 14
+    separator_height = 0
+    transparency = 0
+
+    # Text
+    markup = full
+    format = "<b>%s</b>\n%b"
+    alignment = left
+    vertical_alignment = center
+    ellipsize = middle
+    ignore_newline = no
+    show_age_threshold = 60
+    word_wrap = yes
+
+    # Icons
+    icon_position = left
+    enable_recursive_icon_lookup = true
+    icon_theme = "Papirus-Dark"
+    min_icon_size = 32
+    max_icon_size = 48
+
+    # Progress bars (volume popup, downloads, ...)
+    progress_bar = true
+    progress_bar_height = 8
+    progress_bar_frame_width = 0
+    progress_bar_min_width = 150
+    progress_bar_max_width = 400
+    progress_bar_corner_radius = 4
+
+    # Behaviour
+    sort = yes
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = yes
+    # don't let notifications time out while you're away (seconds idle)
+    idle_threshold = 120
+    sticky_history = yes
+    history_length = 30
+
+    # Actions / links open through rofi and the default browser
+    dmenu = /usr/bin/rofi -dmenu -p "  action"
+    browser = /usr/bin/xdg-open
+
+    # Mouse
+    mouse_left_click = do_action, close_current
+    mouse_middle_click = close_all
+    mouse_right_click = close_current
+
+    title = Dunst
+    class = Dunst
+
+[urgency_low]
+    background = "#1A1A22"
+    foreground = "#8A909A"
+    frame_color = "#2A3038"
+    highlight = "#4A5260"
+    timeout = 4
+
+[urgency_normal]
+    background = "#1A1A22"
+    foreground = "#D8D8E0"
+    frame_color = "#2280CF"
+    highlight = "#2280CF"
+    timeout = 6
+
+[urgency_critical]
+    background = "#1A1A22"
+    foreground = "#D8D8E0"
+    frame_color = "#F11A39"
+    highlight = "#F11A39"
+    timeout = 0
+
+# While something is fullscreen (games, videos): hold notifications until you
+# leave fullscreen, but still show critical ones
+[fullscreen_delay]
+    fullscreen = delay
+
+[fullscreen_show_critical]
+    msg_urgency = critical
+    fullscreen = show
+
+# Volume popup from the volume keys: short, no history clutter
+[volume]
+    appname = volume
+    timeout = 1500
+    history_ignore = yes

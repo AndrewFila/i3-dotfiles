@@ -1,0 +1,15 @@
+# Official-repo packages this desktop uses (installed by system/setup.sh)
+# window manager + bar + launcher + compositor + notifications
+i3-wm polybar rofi picom dunst libnotify dex stow
+# X session, display manager, lock, wallpaper
+xorg-xinit xorg-xrdb xorg-xset ly i3lock xss-lock feh imagemagick
+# fonts + icons
+ttf-firacode-nerd ttf-fira-code inter-font noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-liberation papirus-icon-theme
+# audio, bluetooth, network, media
+pipewire-pulse wireplumber pavucontrol bluez bluez-utils blueman network-manager-applet playerctl mpv yt-dlp
+# desktop plumbing
+xdg-utils xdg-desktop-portal xdg-desktop-portal-gtk polkit-gnome xclip clipmenu maim slop
+# system care
+zram-generator pacman-contrib timeshift cronie
+# small tools
+bat btop tldr man-pages 7zip unrar

@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Move dunst's notification corner with keyboard focus:
+top-left on the primary monitor, top-right on any other monitor.
+
+Watches i3 focus changes and, when focus moves to a different kind of
+monitor, writes ~/.config/dunst/dunstrc.d/50-position.conf and reloads dunst.
+"Primary" is the xrandr primary flag, which the ~/.screenlayout layouts set.
+"""
+import json
+import os
+import signal
+import subprocess
+from pathlib import Path
+
+DROPIN = Path.home() / ".config/dunst/dunstrc.d/50-position.conf"
+PIDFILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "dunst-follow.pid"
+
+
+def i3(kind):
+    return json.loads(subprocess.run(["i3-msg", "-t", kind], capture_output=True, text=True).stdout)
+
+
+def focus_on_primary():
+    try:
+        output = next(w["output"] for w in i3("get_workspaces") if w["focused"])
+        return next((o["primary"] for o in i3("get_outputs") if o["name"] == output), True)
+    except (StopIteration, json.JSONDecodeError):
+        return True
+
+
+last = None
+
+
+def update():
+    global last
+    primary = focus_on_primary()
+    if primary == last:
+        return
+    last = primary
+    DROPIN.parent.mkdir(parents=True, exist_ok=True)
+    DROPIN.write_text(
+        "# written by ~/.config/i3/scripts/dunst-follow\n"
+        f"[global]\n    origin = {'top-left' if primary else 'top-right'}\n"
+    )
+    subprocess.run(["dunstctl", "reload"], capture_output=True)
+
+
+def main():
+    # replace an older copy (i3 restart runs exec_always again)
+    try:
+        os.kill(int(PIDFILE.read_text()), signal.SIGTERM)
+    except (OSError, ValueError):
+        pass
+    PIDFILE.write_text(str(os.getpid()))
+
+    update()
+    events = subprocess.Popen(
+        ["i3-msg", "-t", "subscribe", "-m", '["workspace", "output"]'],
+        stdout=subprocess.PIPE, text=True,
+    )
+    for _ in events.stdout:
+        update()
+
+
+if __name__ == "__main__":
+    main()

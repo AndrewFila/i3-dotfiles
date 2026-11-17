@@ -1,0 +1,11 @@
+#!/bin/sh
+# Session environment. Sourced by ly (and other display managers) and by ~/.xinitrc.
+
+export TERMINAL=st
+export XDG_CURRENT_DESKTOP=i3
+
+# Let portals (Firefox's file dialogs) and other user services find this X session
+dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP
+
+# Monitor layout: the last one picked with mod+l (default: dual-monitor)
+"$HOME/.config/i3/scripts/layouts" --restore

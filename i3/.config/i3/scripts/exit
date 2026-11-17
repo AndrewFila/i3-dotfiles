@@ -1,0 +1,4 @@
+#!/bin/sh
+# Exit-i3 confirmation in rofi (yomi-themed, unlike i3-nagbar)
+choice=$(printf '%s\n' "Cancel" "Exit i3" | rofi -dmenu -i -p "󰗽  log out?" -l 2 -selected-row 0) || exit 0
+[ "$choice" = "Exit i3" ] && i3-msg exit

@@ -1,0 +1,23 @@
+#!/bin/sh
+# usage: wallpaper [image]
+# Set the desktop background (and remember it). With no argument, re-applies
+# the saved one. ~/.config/wallpaper is a symlink to the current image.
+
+WALL="$HOME/.config/wallpaper"
+DEFAULT="$HOME/.config/wallpaper-default.png"
+
+if [ -n "${1:-}" ]; then
+    [ -f "$1" ] || { echo "wallpaper: no such file: $1" >&2; exit 1; }
+    ln -sfn "$(realpath "$1")" "$WALL"
+fi
+
+# First run with nothing chosen: make a dark yomi gradient
+if [ ! -e "$WALL" ]; then
+    [ -f "$DEFAULT" ] || magick -size 3840x2160 radial-gradient:'#1E1E28-#0F0F14' "$DEFAULT"
+    ln -sfn "$DEFAULT" "$WALL"
+fi
+
+feh --no-fehbg --bg-fill "$WALL"
+
+# Rebuild the blurred lock image in the background so locking is instant
+"$HOME/.config/i3/scripts/lock" --prepare >/dev/null 2>&1 &

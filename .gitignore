@@ -1,0 +1,6 @@
+# built by install.sh
+i3/.config/i3/barriers/barriers
+# written at runtime by i3/scripts/dunst-follow
+dunst/.config/dunst/dunstrc.d/
+__pycache__/
+*.pyc

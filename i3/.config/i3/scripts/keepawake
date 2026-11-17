@@ -1,0 +1,20 @@
+#!/bin/sh
+# Keep the screen from blanking (and locking) while a video plays.
+#
+# Every 30s: if any media player other than the ones in IGNORE reports
+# "Playing" over MPRIS (Firefox, mpv, ...), reset X's idle timer. Music apps
+# are ignored so listening to music still lets the screen blank and lock.
+# Needs: playerctl, xset (xorg-xset)
+
+IGNORE="spotify"
+
+# replace any older copy of this script
+for p in $(pgrep -x keepawake); do
+    [ "$p" != "$$" ] && kill "$p"
+done
+
+while sleep 30; do
+    playing=$(playerctl --all-players --format '{{playerName}} {{status}}' status 2>/dev/null |
+        grep ' Playing$' | grep -viE "^($(echo "$IGNORE" | tr ' ' '|')) ")
+    [ -n "$playing" ] && xset s reset
+done

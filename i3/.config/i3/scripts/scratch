@@ -1,0 +1,72 @@
+#!/bin/sh
+# usage: scratch [-s WIDTHxHEIGHT] <window-class> <command...>
+# Toggle the scratchpad window with the given X class:
+#   - visible on any monitor    -> hide it
+#   - hidden                    -> show it, sized and centered on HDMI-0
+#                                  (or the current monitor if HDMI-0 is off)
+#   - not running               -> launch the command, wait for the window, show it
+# -s sets its size in pixels (default 1200x800).
+#
+# Size and position are applied every time it's shown, because i3 measures
+# hidden scratchpad windows against the whole multi-monitor screen.
+# The waiting matters for apps like Spotify that set their class only after
+# the window appears, which i3's for_window rules can miss.
+
+dims=1200x800
+if [ "${1:-}" = "-s" ]; then
+    dims=$2
+    shift 2
+fi
+class=$1
+shift
+
+# One run per app at a time: a second press while the app is still starting
+# would otherwise launch a duplicate
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/scratch-$class.lock"
+flock -n 9 || exit 0
+# skip updater/splash windows (e.g. Discord's) so they never become the scratchpad
+crit="[class=\"^${class}\$\" title=\"^(?!.*(?i)updater)\"]"
+
+# Always open on HDMI-0 (falls back to the current monitor if it is off)
+to_output="$crit move container to output HDMI-0, "
+show="$crit move scratchpad, $crit scratchpad show, ${to_output}$crit resize set ${dims%x*} px ${dims#*x} px, $crit move position center, $crit focus"
+
+# Prints "here" (visible on some monitor), "away" (hidden) or "none"
+state() {
+    python3 - "$class" <<'EOF'
+import json, re, subprocess, sys
+cls = sys.argv[1]
+tree = json.loads(subprocess.run(["i3-msg", "-t", "get_tree"], capture_output=True).stdout)
+wss = json.loads(subprocess.run(["i3-msg", "-t", "get_workspaces"], capture_output=True).stdout)
+visible = {w["name"] for w in wss if w["visible"]}
+found = []
+def walk(n, ws):
+    if n.get("type") == "workspace":
+        ws = n["name"]
+    p = n.get("window_properties") or {}
+    if p.get("class") == cls and not re.search("(?i)updater", p.get("title") or ""):
+        found.append(ws)
+    for c in n.get("nodes", []) + n.get("floating_nodes", []):
+        walk(c, ws)
+walk(tree, None)
+print("none" if not found else "here" if visible & set(found) else "away")
+EOF
+}
+
+case $(state) in
+here) i3-msg -q "$crit move scratchpad" ;;
+away) i3-msg -q "$show" ;;
+none)
+    setsid -f "$@" >/dev/null 2>&1 9>&-  # 9>&-: the app must not hold the lock
+    i=0
+    while [ $i -lt 150 ]; do # wait up to 30s
+        if [ "$(state)" != none ]; then
+            sleep 0.3 # let for_window rules settle
+            i3-msg -q "$show"
+            exit 0
+        fi
+        sleep 0.2
+        i=$((i + 1))
+    done
+    ;;
+esac

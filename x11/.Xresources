@@ -1,0 +1,13 @@
+! Colors: yomi (dark), straight from the repo so updates carry over
+#include "/home/a/projects/yomi/ports/xresources/yomi.Xresources"
+
+! st (reads st.* resources)
+st.font:     FiraCode Nerd Font Mono:pixelsize=15:antialias=true:autohint=true
+st.fontalt0: Noto Color Emoji:pixelsize=13:antialias=true:autohint=true
+
+! Font rendering for X apps
+Xft.antialias: 1
+Xft.hinting:   1
+Xft.hintstyle: hintslight
+Xft.rgba:      rgb
+Xft.lcdfilter: lcddefault

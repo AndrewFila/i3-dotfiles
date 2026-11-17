@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Rofi menu of audio outputs. Picking one makes it the default and moves
+everything currently playing over to it."""
+import json
+import re
+import subprocess
+import sys
+
+
+def pactl(*args):
+    return subprocess.run(["pactl", *args], capture_output=True, text=True)
+
+
+def nice_name(desc):
+    # "Schiit Modi+ Analog Stereo" -> "Schiit Modi+", drop "(IEC958)" noise, etc.
+    desc = re.sub(r"\s*(Analog|Digital) Stereo", "", desc)
+    desc = re.sub(r"\s*\((IEC958|HDMI)\)", "", desc)
+    m = re.search(r"\[(.+)\]$", desc)  # HDMI outputs: show the monitor name
+    if m:
+        desc = f"{m.group(1)} (HDMI)"
+    return desc.strip()
+
+
+def glyph(name):
+    if name.startswith("bluez_"):
+        return "󰋋"  # headphones
+    if "hdmi" in name:
+        return "󰍹"  # monitor
+    if "usb" in name:
+        return "󰓃"  # speaker / DAC
+    return "󰕾"
+
+
+def main():
+    sinks = json.loads(pactl("-f", "json", "list", "sinks").stdout or "[]")
+    if not sinks:
+        subprocess.run(["notify-send", "Audio", "No audio outputs found"])
+        return 1
+    default = pactl("get-default-sink").stdout.strip()
+    current = next((i for i, s in enumerate(sinks) if s["name"] == default), 0)
+
+    lines = [f"{glyph(s['name'])}  {nice_name(s['description'])}" for s in sinks]
+    pick = subprocess.run(
+        ["rofi", "-dmenu", "-i", "-p", "󰕾  output", "-format", "i",
+         "-selected-row", str(current), "-a", str(current)],
+        input="\n".join(lines), capture_output=True, text=True,
+    )
+    if pick.returncode != 0 or not pick.stdout.strip().isdigit():
+        return 0  # cancelled
+
+    sink = sinks[int(pick.stdout.strip())]["name"]
+    pactl("set-default-sink", sink)
+    for line in pactl("list", "short", "sink-inputs").stdout.splitlines():
+        pactl("move-sink-input", line.split("\t")[0], sink)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

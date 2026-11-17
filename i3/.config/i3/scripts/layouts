@@ -1,0 +1,36 @@
+#!/bin/sh
+# usage: layouts            pick a monitor layout with rofi and apply it
+#        layouts --restore  re-apply the last picked layout (run at login)
+#
+# Layouts are the arandr scripts in ~/.screenlayout. The last one picked is
+# remembered, so the next login starts with it. When a monitor turns off, i3
+# moves its workspaces to the remaining screen.
+
+DIR="$HOME/.screenlayout"
+STATE="${XDG_CACHE_HOME:-$HOME/.cache}/screenlayout"
+DEFAULT=dual-monitor
+
+saved=$(cat "$STATE" 2>/dev/null)
+
+if [ "${1:-}" = "--restore" ]; then
+    [ -f "$DIR/$saved.sh" ] || saved=$DEFAULT
+    # if it fails (e.g. a monitor is unplugged), X keeps its automatic layout
+    [ -f "$DIR/$saved.sh" ] && sh "$DIR/$saved.sh"
+    exit 0
+fi
+
+choice=$(for f in "$DIR"/*.sh; do basename "$f" .sh; done |
+    rofi -dmenu -i -p "layout" -select "$saved") || exit 0
+[ -f "$DIR/$choice.sh" ] || exit 1
+
+if ! sh "$DIR/$choice.sh"; then
+    notify-send "Layout" "Couldn't apply $choice" 2>/dev/null
+    exit 1
+fi
+mkdir -p "$(dirname "$STATE")"
+echo "$choice" >"$STATE"
+
+sleep 1 # let i3 settle on the new outputs
+"$HOME/.config/polybar/launch.sh"
+"$HOME/.config/i3/scripts/wallpaper" # also rebuilds the lock image
+# the mouse walls (barriers) follow layout changes on their own

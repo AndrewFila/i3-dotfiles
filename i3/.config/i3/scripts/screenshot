@@ -1,0 +1,45 @@
+#!/bin/sh
+# usage: screenshot area|full|window
+# Saves to ~/Pictures/Screenshots, copies to the clipboard, and shows a
+# notification with a preview (click it to open the image).
+# Needs: maim (+ slop for area), xclip, imagemagick (thumbnail), dunst
+
+mode=${1:-area}
+dir="$HOME/Pictures/Screenshots"
+mkdir -p "$dir"
+file="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+
+case $mode in
+area)
+    # drag to select, or click a window; Esc cancels
+    maim --select --hidecursor --highlight --color=0.13,0.50,0.81,0.25 --bordersize=2 "$file" || exit 0
+    ;;
+full)
+    maim --hidecursor "$file"
+    ;;
+window)
+    id=$(i3-msg -t get_tree | python3 -c '
+import json, sys
+def find(n):
+    if n.get("focused") and n.get("window"): return n["window"]
+    for c in n.get("nodes", []) + n.get("floating_nodes", []):
+        r = find(c)
+        if r: return r
+print(find(json.load(sys.stdin)) or "")')
+    [ -n "$id" ] || exit 1
+    maim --hidecursor --window "$id" "$file"
+    ;;
+*)
+    echo "usage: screenshot area|full|window" >&2
+    exit 1
+    ;;
+esac
+
+[ -s "$file" ] || exit 1
+xclip -selection clipboard -t image/png -i "$file"
+
+thumb="${XDG_RUNTIME_DIR:-/tmp}/screenshot-thumb.png"
+magick "$file" -thumbnail 128x128 "$thumb" 2>/dev/null || thumb=camera-photo
+action=$(dunstify -a screenshot -i "$thumb" -A "open,Open" \
+    "Screenshot saved" "$(basename "$file")  ·  copied to clipboard")
+[ "$action" = open ] && xdg-open "$file"

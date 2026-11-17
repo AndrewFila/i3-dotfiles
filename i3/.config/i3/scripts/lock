@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# usage: lock [i3lock args...]   lock the screen over a blurred wallpaper
+#        lock --prepare          only build the cached lock image
+#
+# The blurred image is fitted to each monitor and cached, keyed on the
+# wallpaper file and the monitor layout, so it's rebuilt only when one changes.
+
+set -uo pipefail
+
+WALL="$HOME/.config/wallpaper"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/i3lock"
+BG="#0F0F14"
+
+build() {
+    [ -e "$WALL" ] && command -v magick >/dev/null || return 1
+
+    # Monitor geometries, e.g. 1920x1080+0+360
+    mapfile -t mons < <(xrandr --listactivemonitors | awk 'NR>1{print $3}' | sed 's#/[0-9]*##g')
+    screen=$(xrandr | sed -n 's/.*current \([0-9]*\) x \([0-9]*\).*/\1x\2/p' | head -1)
+
+    key=$( { realpath "$WALL"; stat -Lc %Y "$WALL"; echo "$screen ${mons[*]}"; } | md5sum | cut -c1-12)
+    img="$CACHE/lock-$key.png"
+    [ -f "$img" ] && { echo "$img"; return 0; }
+
+    mkdir -p "$CACHE"
+    rm -f "$CACHE"/lock-*.png
+
+    args=(-size "$screen" "xc:$BG")
+    for m in "${mons[@]}"; do
+        size=${m%%+*}
+        offset=+${m#*+}
+        # fill the monitor, then blur cheaply: shrink, blur, scale back up; dim a little
+        args+=( \( "$WALL" -resize "${size}^" -gravity center -extent "$size"
+                   -scale 10% -blur 0x3 -resize "${size}!"
+                   -fill "$BG" -colorize 25% \)
+                -gravity northwest -geometry "$offset" -composite )
+    done
+    magick "${args[@]}" "$img" || return 1
+    echo "$img"
+}
+
+if [ "${1:-}" = "--prepare" ]; then
+    build >/dev/null
+    exit
+fi
+
+# -e: don't try empty passwords, -f: show failed attempt count
+if img=$(build); then
+    exec i3lock -e -f -c "${BG#\#}" -i "$img" "$@"
+else
+    exec i3lock -e -f -c "${BG#\#}" "$@"
+fi

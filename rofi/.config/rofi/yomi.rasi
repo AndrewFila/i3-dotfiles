@@ -1,0 +1,46 @@
+/* yomi — dark */
+* {
+    bg:      #0F0F14;
+    bg1:     #1A1A22;
+    bg2:     #2A3038;
+    fg:      #D8D8E0;
+    fgdim:   #8A909A;
+    red:     #F11A39;
+    blue:    #2280CF;
+
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+window {
+    width:            600px;
+    background-color: @bg;
+    border:           2px;
+    border-color:     @blue;
+    border-radius:    8px;
+    padding:          12px;
+}
+
+mainbox { spacing: 10px; children: [ inputbar, listview ]; }
+
+inputbar {
+    background-color: @bg1;
+    border-radius:    6px;
+    padding:          8px 10px;
+    spacing:          8px;
+    children:         [ prompt, entry ];
+}
+prompt { text-color: @red; }
+entry  { placeholder: "search"; placeholder-color: @fgdim; cursor: text; }
+
+listview { lines: 8; columns: 1; spacing: 4px; fixed-height: true; scrollbar: false; }
+
+element {
+    padding:       6px 10px;
+    border-radius: 6px;
+    spacing:       10px;
+}
+element normal.normal, element alternate.normal { background-color: transparent; text-color: @fg; }
+element selected.normal { background-color: @bg2; text-color: @fg; border: 0 0 0 3px; border-color: @red; }
+element-icon { size: 20px; }
+element-text { text-color: inherit; vertical-align: 0.5; }
